@@ -69,6 +69,7 @@
   .tile.focus { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(255,255,255,0.95), 0 26px 60px rgba(0,0,0,0.6); z-index: 2; }
 
   #hint { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-size: 24px; color: rgba(255,255,255,0.35); letter-spacing: 2px; }
+  #diag { position: absolute; left: 24px; bottom: 14px; font-size: 20px; color: rgba(255,255,255,0.45); font-family: monospace; }
   #toast { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(30px); opacity: 0;
            background: rgba(255,255,255,0.95); color: #111; padding: 22px 40px; border-radius: 999px; font-size: 30px; font-weight: 500;
            transition: all 0.3s ease; }
@@ -93,7 +94,23 @@
   <div id="shelf"></div>
   <div id="toast"></div>
 </div>
-<script src="apps.js"></script>
-<script src="launcher.js"></script>
+<div id="diag"></div>
+<script>
+  /* Skripte vom Branch "main" laden, damit Updates ohne neues Release ankommen. */
+  (function () {
+    var base = "https://cdn.jsdelivr.net/gh/el-schinkone/hausbuki-launcher@main/app/";
+    var bust = "?t=" + Math.floor(Date.now() / 60000);
+    function load(src, next) {
+      var s = document.createElement("script");
+      s.src = base + src + bust;
+      s.onload = next;
+      s.onerror = function () {               // Rückfall: lokale Kopie
+        var l = document.createElement("script"); l.src = src; l.onload = next; document.body.appendChild(l);
+      };
+      document.body.appendChild(s);
+    }
+    load("apps.js", function () { load("launcher.js", function () {}); });
+  })();
+</script>
 </body>
 </html>

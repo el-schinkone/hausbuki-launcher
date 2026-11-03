@@ -3,6 +3,14 @@
 
   var hasTizen = typeof window.tizen !== "undefined" && tizen.application;
   var COLS = 4;
+  var VERSION = "1.2.0";
+  var diagState = { tizen: hasTizen ? "ja" : "nein", liste: "…", start: "–" };
+  function diag(key, val) {
+    if (key) diagState[key] = val;
+    var el = document.getElementById("diag");
+    if (el) el.textContent = "v" + VERSION + " · tizen: " + diagState.tizen + " · Apps: " + diagState.liste + " · Start: " + diagState.start;
+  }
+  function errText(e) { return e ? (e.name || "") + (e.message ? ": " + e.message : "") : "?"; }
 
   /* ---------- Installierte Apps ermitteln ---------- */
   function low(s) { return String(s || "").toLowerCase(); }
@@ -45,9 +53,10 @@
           seen[i.name] = true;
           list.push({ name: i.name, id: i.id });
         });
+        diag("liste", "OK " + list.length);
         done(list.length ? decorate(list) : decorate(FALLBACK), list.length ? null : "leere Liste");
-      }, function (e) { done(decorate(FALLBACK), e && e.name); });
-    } catch (e) { done(decorate(FALLBACK), e && e.name); }
+      }, function (e) { diag("liste", "Fehler " + errText(e)); done(decorate(FALLBACK), e && e.name); });
+    } catch (e) { diag("liste", "Fehler " + errText(e)); done(decorate(FALLBACK), e && e.name); }
   }
 
   var apps = [];
@@ -142,17 +151,23 @@
 
   function launch(a) {
     if (!hasTizen) { toast("Vorschau: würde " + a.name + " starten"); return; }
+    diag("start", a.name + " (" + a.id + ") …");
+    function fail(firstErr, e) {
+      var msg = a.name + ": " + firstErr + " / " + errText(e);
+      diag("start", msg);
+      toast(a.name + " startet nicht");
+    }
     function viaAppControl(firstErr) {
       try {
         var ctl = new tizen.ApplicationControl("http://tizen.org/appcontrol/operation/default", null, null, null, null);
-        tizen.application.launchAppControl(ctl, a.id, function () {}, function (e) {
-          toast(a.name + " startet nicht (" + firstErr + " / " + (e && e.name) + ")");
-        });
-      } catch (e) { toast(a.name + " startet nicht (" + firstErr + " / " + (e && e.name) + ")"); }
+        tizen.application.launchAppControl(ctl, a.id, function () { diag("start", a.name + " OK (AppControl)"); },
+          function (e) { fail(firstErr, e); });
+      } catch (e) { fail(firstErr, e); }
     }
     try {
-      tizen.application.launch(a.id, function () {}, function (e) { viaAppControl(e && e.name); });
-    } catch (e) { viaAppControl(e && e.name); }
+      tizen.application.launch(a.id, function () { diag("start", a.name + " OK"); },
+        function (e) { viaAppControl(errText(e)); });
+    } catch (e) { viaAppControl(errText(e)); }
   }
 
   function pillAction(p) {
@@ -185,6 +200,7 @@
     render();
   });
 
+  diag();
   loadApps(function (list, err) {
     apps = list;
     build();

@@ -5,25 +5,52 @@
   var COLS = 4;
 
   /* ---------- Installierte Apps ermitteln ---------- */
-  function resolveId(app) {
-    if (!hasTizen) return app.ids[0];               // Vorschau im Browser
-    for (var i = 0; i < app.ids.length; i++) {
-      try {
-        tizen.application.getAppInfo(app.ids[i]);
-        return app.ids[i];                           // installiert
-      } catch (e) {
-        if (e && e.name === "NotFoundError") continue;
-        return app.ids[0];                           // Prüfen nicht erlaubt: trotzdem anzeigen
-      }
-    }
-    return null;                                     // nicht installiert
+  function low(s) { return String(s || "").toLowerCase(); }
+  function styleFor(name) {
+    var n = low(name);
+    for (var k in STYLES) if (n.indexOf(k) >= 0) return STYLES[k];
+    return { color: "#2c2c30", fg: "#ffffff", glow: "#2a2a2e" };
+  }
+  function hidden(name) {
+    var n = low(name);
+    for (var i = 0; i < HIDE.length; i++) if (n.indexOf(low(HIDE[i])) >= 0) return true;
+    return false;
+  }
+  function favRank(name) {
+    var n = low(name);
+    for (var i = 0; i < FAVORITES.length; i++) if (n.indexOf(low(FAVORITES[i])) >= 0) return i;
+    return 999;
+  }
+  function decorate(list) {
+    return list
+      .filter(function (a) { return a.name && !hidden(a.name); })
+      .sort(function (a, b) {
+        var d = favRank(a.name) - favRank(b.name);
+        return d !== 0 ? d : a.name.localeCompare(b.name);
+      })
+      .map(function (a) {
+        var s = styleFor(a.name);
+        return { name: a.name, id: a.id, color: s.color, fg: s.fg, glow: s.glow };
+      });
+  }
+
+  function loadApps(done) {
+    if (!hasTizen) { done(decorate(FALLBACK), null); return; }   // Vorschau im Browser
+    try {
+      tizen.application.getAppsInfo(function (infos) {
+        var seen = {};
+        var list = [];
+        infos.forEach(function (i) {
+          if (i.show === false || seen[i.name]) return;
+          seen[i.name] = true;
+          list.push({ name: i.name, id: i.id });
+        });
+        done(list.length ? decorate(list) : decorate(FALLBACK), list.length ? null : "leere Liste");
+      }, function (e) { done(decorate(FALLBACK), e && e.name); });
+    } catch (e) { done(decorate(FALLBACK), e && e.name); }
   }
 
   var apps = [];
-  APPS.forEach(function (a) {
-    var id = resolveId(a);
-    if (id) apps.push({ name: a.name, id: id, color: a.color, fg: a.fg, glow: a.glow });
-  });
 
   /* ---------- Aufbau ---------- */
   var ICONS = {
@@ -43,21 +70,25 @@
 
   var shelf = document.getElementById("shelf");
   var tileEls = [];
-  var rowEl = null;
-  apps.forEach(function (a, i) {
-    if (i % COLS === 0) {
-      rowEl = document.createElement("div");
-      rowEl.className = "row " + (i === 0 ? "dock" : "grid");
-      shelf.appendChild(rowEl);
-    }
-    var t = document.createElement("div");
-    t.className = "tile";
-    t.style.background = a.color;
-    t.style.color = a.fg;
-    t.textContent = a.name;
-    rowEl.appendChild(t);
-    tileEls.push(t);
-  });
+  function build() {
+    shelf.innerHTML = "";
+    tileEls = [];
+    var rowEl = null;
+    apps.forEach(function (a, i) {
+      if (i % COLS === 0) {
+        rowEl = document.createElement("div");
+        rowEl.className = "row " + (i === 0 ? "dock" : "grid");
+        shelf.appendChild(rowEl);
+      }
+      var t = document.createElement("div");
+      t.className = "tile";
+      t.style.background = a.color;
+      t.style.color = a.fg;
+      t.textContent = a.name;
+      rowEl.appendChild(t);
+      tileEls.push(t);
+    });
+  }
 
   /* ---------- Uhr ---------- */
   var DAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
@@ -111,11 +142,17 @@
 
   function launch(a) {
     if (!hasTizen) { toast("Vorschau: würde " + a.name + " starten"); return; }
+    function viaAppControl(firstErr) {
+      try {
+        var ctl = new tizen.ApplicationControl("http://tizen.org/appcontrol/operation/default", null, null, null, null);
+        tizen.application.launchAppControl(ctl, a.id, function () {}, function (e) {
+          toast(a.name + " startet nicht (" + firstErr + " / " + (e && e.name) + ")");
+        });
+      } catch (e) { toast(a.name + " startet nicht (" + firstErr + " / " + (e && e.name) + ")"); }
+    }
     try {
-      tizen.application.launch(a.id, function () {}, function (e) {
-        toast(a.name + " lässt sich nicht starten (" + (e && e.name) + ")");
-      });
-    } catch (e) { toast(a.name + ": " + (e && e.message)); }
+      tizen.application.launch(a.id, function () {}, function (e) { viaAppControl(e && e.name); });
+    } catch (e) { viaAppControl(e && e.name); }
   }
 
   function pillAction(p) {
@@ -148,6 +185,10 @@
     render();
   });
 
-  if (!apps.length) toast("Keine der eingetragenen Apps gefunden – apps.js prüfen");
-  render();
+  loadApps(function (list, err) {
+    apps = list;
+    build();
+    render();
+    if (err) toast("App-Liste nicht lesbar (" + err + ") – zeige Standard-Apps");
+  });
 })();

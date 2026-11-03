@@ -1,6 +1,6 @@
 {
   "name": "hausbuki-launcher",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Schlichter Startbildschirm im Apple-TV-Stil für Samsung Tizen TVs (TizenBrew-Modul).",
   "packageType": "app",
   "appName": "HausBuki Launcher",

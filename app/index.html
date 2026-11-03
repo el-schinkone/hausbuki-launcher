@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>HausBuki Launcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --glow: #4a0003;
+    --text: #ffffff;
+    --muted: rgba(255,255,255,0.55);
+    --pill: rgba(255,255,255,0.08);
+    --pill-border: rgba(255,255,255,0.14);
+    --dock: rgba(20,20,22,0.72);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    background: #000; color: var(--text);
+    font-family: "Outfit", "Samsung One", "Helvetica Neue", Arial, sans-serif;
+  }
+  #bg {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 60% 70% at 32% 42%, var(--glow) 0%, rgba(0,0,0,0) 70%), #000;
+    transition: background 0.6s ease;
+  }
+  #app { position: relative; width: 1920px; height: 1080px; padding: 64px 120px; }
+
+  /* Kopfzeile */
+  header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .greet { font-size: 26px; letter-spacing: 6px; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+  .clockrow { display: flex; align-items: center; margin-top: 10px; }
+  .clock { font-size: 120px; font-weight: 200; line-height: 1; letter-spacing: -2px; }
+  .sep { width: 2px; height: 60px; background: rgba(255,255,255,0.18); margin: 0 36px; }
+  .date { font-size: 30px; letter-spacing: 5px; text-transform: uppercase; color: var(--muted); }
+
+  .pills { display: flex; gap: 22px; margin-top: 50px; }
+  .pill {
+    display: flex; align-items: center; gap: 16px;
+    padding: 20px 34px; border-radius: 999px;
+    background: var(--pill); border: 2px solid var(--pill-border);
+    font-size: 30px; font-weight: 500;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  }
+  .pill svg { width: 34px; height: 34px; fill: currentColor; }
+  .pill.focus { background: rgba(255,255,255,0.92); color: #111; border-color: #fff; transform: scale(1.07); }
+
+  /* Titel der fokussierten App */
+  #title { position: absolute; left: 150px; top: 520px; font-size: 104px; font-weight: 300; letter-spacing: -1px;
+           transition: opacity 0.25s ease; }
+
+  /* Dock + Raster */
+  #shelf { position: absolute; left: 120px; right: 120px; top: 690px; transition: transform 0.45s cubic-bezier(.2,.8,.2,1); }
+  #shelf.up { transform: translateY(-470px); }
+  .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 44px; padding: 26px; }
+  .row.dock { background: var(--dock); border: 2px solid rgba(255,255,255,0.08); border-radius: 46px; }
+  .row.grid { margin-top: 30px; }
+  .tile {
+    height: 200px; border-radius: 30px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 54px; font-weight: 600; letter-spacing: -0.5px;
+    text-align: center; line-height: 1.05; padding: 0 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    transition: transform 0.22s cubic-bezier(.2,.8,.2,1), box-shadow 0.22s ease;
+  }
+  .tile.focus { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(255,255,255,0.95), 0 26px 60px rgba(0,0,0,0.6); z-index: 2; }
+
+  #hint { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-size: 24px; color: rgba(255,255,255,0.35); letter-spacing: 2px; }
+  #toast { position: absolute; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(30px); opacity: 0;
+           background: rgba(255,255,255,0.95); color: #111; padding: 22px 40px; border-radius: 999px; font-size: 30px; font-weight: 500;
+           transition: all 0.3s ease; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="app">
+  <header>
+    <div>
+      <div class="greet" id="greet">Guten Abend</div>
+      <div class="clockrow">
+        <div class="clock" id="clock">--:--</div>
+        <div class="sep"></div>
+        <div class="date" id="date"></div>
+      </div>
+    </div>
+    <div class="pills" id="pills"></div>
+  </header>
+  <div id="title"></div>
+  <div id="shelf"></div>
+  <div id="toast"></div>
+</div>
+<script src="apps.js"></script>
+<script src="launcher.js"></script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 
   var hasTizen = typeof window.tizen !== "undefined" && tizen.application;
   var COLS = 4;
-  var VERSION = "1.2.0";
+  var VERSION = "1.3.0";
   var diagState = { tizen: hasTizen ? "ja" : "nein", liste: "…", start: "–" };
   function diag(key, val) {
     if (key) diagState[key] = val;
@@ -42,8 +42,50 @@
       });
   }
 
+  /* Hintergrunddienst des Moduls (TizenBrew), der die TV-Funktionen hat */
+  var SVC = "http://127.0.0.1:8099";
+  var useSvc = false;
+  function svc(path, cb) {
+    var x = new XMLHttpRequest();
+    x.open("GET", SVC + path, true);
+    x.timeout = 5000;
+    x.onload = function () {
+      var data = null;
+      try { data = JSON.parse(x.responseText); } catch (e) {}
+      cb(x.status >= 200 && x.status < 300 ? null : (data && data.error) || ("HTTP " + x.status), data);
+    };
+    x.onerror = function () { cb("Dienst nicht erreichbar"); };
+    x.ontimeout = function () { cb("Dienst antwortet nicht"); };
+    x.send();
+  }
+
   function loadApps(done) {
-    if (!hasTizen) { done(decorate(FALLBACK), null); return; }   // Vorschau im Browser
+    if (!hasTizen) {
+      // Versuch über den Hintergrunddienst, mit Wiederholung (Dienst startet evtl. gerade)
+      var tries = 0;
+      (function attempt() {
+        svc("/apps", function (err, infos) {
+          if (!err && infos && infos.length) {
+            useSvc = true;
+            var seen = {}, list = [];
+            infos.forEach(function (i) {
+              if (i.show === false || seen[i.name]) return;
+              seen[i.name] = true; list.push({ name: i.name, id: i.id });
+            });
+            diag("tizen", "über Dienst");
+            diag("liste", "OK " + list.length);
+            done(decorate(list), null);
+          } else if (++tries < 6) {
+            diag("liste", "warte auf Dienst (" + tries + ") " + (err || ""));
+            setTimeout(attempt, 1500);
+          } else {
+            diag("liste", "Fehler " + (err || "leer"));
+            done(decorate(FALLBACK), err);
+          }
+        });
+      })();
+      return;
+    }
     try {
       tizen.application.getAppsInfo(function (infos) {
         var seen = {};
@@ -150,8 +192,14 @@
   }
 
   function launch(a) {
-    if (!hasTizen) { toast("Vorschau: würde " + a.name + " starten"); return; }
     diag("start", a.name + " (" + a.id + ") …");
+    if (!hasTizen) {
+      svc("/launch?id=" + encodeURIComponent(a.id), function (err) {
+        if (err) { diag("start", a.name + ": " + err); toast(a.name + " startet nicht"); }
+        else diag("start", a.name + " OK");
+      });
+      return;
+    }
     function fail(firstErr, e) {
       var msg = a.name + ": " + firstErr + " / " + errText(e);
       diag("start", msg);

@@ -3,7 +3,7 @@
 
   var hasTizen = typeof window.tizen !== "undefined" && tizen.application;
   var COLS = 4;
-  var VERSION = "1.3.0";
+  var VERSION = "1.3.1";
   var diagState = { tizen: hasTizen ? "ja" : "nein", liste: "…", start: "–" };
   function diag(key, val) {
     if (key) diagState[key] = val;

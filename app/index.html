@@ -95,22 +95,7 @@
   <div id="toast"></div>
 </div>
 <div id="diag"></div>
-<script>
-  /* Skripte vom Branch "main" laden, damit Updates ohne neues Release ankommen. */
-  (function () {
-    var base = "https://cdn.jsdelivr.net/gh/el-schinkone/hausbuki-launcher@main/app/";
-    var bust = "?t=" + Math.floor(Date.now() / 60000);
-    function load(src, next) {
-      var s = document.createElement("script");
-      s.src = base + src + bust;
-      s.onload = next;
-      s.onerror = function () {               // Rückfall: lokale Kopie
-        var l = document.createElement("script"); l.src = src; l.onload = next; document.body.appendChild(l);
-      };
-      document.body.appendChild(s);
-    }
-    load("apps.js", function () { load("launcher.js", function () {}); });
-  })();
-</script>
+<script src="apps.js"></script>
+<script src="launcher.js"></script>
 </body>
 </html>
